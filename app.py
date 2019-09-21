@@ -2,7 +2,7 @@
 import json
 import requests
 from oauthlib.oauth2 import WebApplicationClient
-from flask import Flask, redirect, request, url_for, session
+from flask import Flask, redirect, request, url_for, session, render_template
 
 #TODO:
 #refresh the token
@@ -34,20 +34,22 @@ class league(object):
 
 
 @app.route('/')
+@app.route('/home', methods=['GET','POST'])
 def home():
-    return '''
-    <html>
-        <body>
-            <form method="get" action="redirector">
-                Enter League ID:<br\>
-                <input type="text" name="league_id"/>
-            </form>
-        </body>
-    </html>'''
 
-@app.route('/redirector')
-def redirector(methods=['GET']):
-    session['league_id'] = request.args.get('league_id','137260')
+    if request.method == 'GET':
+        session.pop('user_id', None)
+        session.pop('league_id', None)
+        return render_template('home.html')
+
+    session.update(request.form.to_dict())
+    if 'league_id' not in session:
+        return render_template('home.html', session=session)
+
+    return redirect(url_for('redirector'))
+
+@app.route('/redirector', methods=['GET'])
+def redirector():
     league_obj = league(session['league_id'])
 
     client = WebApplicationClient(league_obj.client_id)
@@ -58,7 +60,7 @@ def redirector(methods=['GET']):
     auth_url, headers, body = req
     return redirect(auth_url)
 
-@app.route('/callback')
+@app.route('/callback', methods=['GET','POST'])
 def callback():
     league_obj = league(session['league_id'])
 
@@ -83,7 +85,7 @@ def callback():
     return redirect(url_for('leaguer'))
 
 #figure out how this will work
-@app.route('/refresh')
+@app.route('/refresh', methods=['GET','POST'])
 def refresh():
     league_obj = league(session['league_id'])
 
@@ -107,7 +109,7 @@ def refresh():
 
     return redirect(url_for('leaguer'))
 
-@app.route('/leaguer')
+@app.route('/leaguer', methods=['GET','POST'])
 def leaguer():
     league_obj = league(session['league_id'])
 
