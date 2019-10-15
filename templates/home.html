@@ -1,13 +1,13 @@
 <html>
     <body>
-        {% if 'user_id' not in session %}
+        {% if 'user' not in session %}
             <form method="post" action="home">
                 Enter Your User ID:<br\>
                 <input type="text" name="user_id"/>
             </form>
 
-        {% elif 'league_id' not in session %}
-            <h1>Hello {{ session['user_id'] }}</h1>
+        {% else %}
+            <h1>Hello {{ user_id }}</h1>
             <form method="post" action="home">
                 Enter Your League ID:<br\>
                 <input type="text" name="league_id"/>

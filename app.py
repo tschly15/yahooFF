@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 import json
 import requests
+from User import User
+from users import users
 from oauthlib.oauth2 import WebApplicationClient
 from flask import Flask, redirect, request, url_for, session, render_template
 
 #TODO:
+#fix yahoo login - there was an issue with my user, so I switched accounts
+#use dpath
 #refresh the token
 #identify leagues by user, not league id
 
 app = Flask(__name__)
 app.secret_key = b'hdknbvmsebnapwema/daf864adfa1'
-app.port = 5010
+app.port = 5000
 
 class league(object):
     '''
@@ -38,19 +42,37 @@ class league(object):
 def home():
 
     if request.method == 'GET':
-        session.pop('user_id', None)
-        session.pop('league_id', None)
+        for key in session.keys():
+            del session[key]
         return render_template('home.html')
 
-    session.update(request.form.to_dict())
-    if 'league_id' not in session:
-        return render_template('home.html', session=session)
+    if 'user_id' in request.form:
+        user_id = request.form['user_id']
+        try:
+            session['user'] = users[user_id]
+        except KeyError:
+            user = User(user_id)
+            session['user'] = user.to_json()
+            return render_template('home.html', session=session, user_id=user_id)
+        else:
+            return redirect(url_for('leaguer'))
 
-    return redirect(url_for('redirector'))
+    user = User(load_user=session['user'])
+    user.league_id = request.form['league_id']
+    session['user'] = user.to_json()
 
-@app.route('/redirector', methods=['GET'])
-def redirector():
-    league_obj = league(session['league_id'])
+    return redirect(url_for('request_auth'))
+
+@app.route('/request_auth', methods=['GET'])
+def request_auth():
+    '''
+    Request an authorization URL
+     Send: client_id, redirect_uri, response_type
+     Receive: authorization code
+    '''
+
+    user = User(load_user=session['user'])
+    league_obj = league(user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
     req = client.prepare_authorization_request(
@@ -62,7 +84,13 @@ def redirector():
 
 @app.route('/callback', methods=['GET','POST'])
 def callback():
-    league_obj = league(session['league_id'])
+    '''
+    Exchange authorization code for access token
+     Send: client_id, client_secret, redirect_uricode, grant_type
+     Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
+    '''
+    user = User(load_user=session['user'])
+    league_obj = league(user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
     req = client.prepare_token_request(
@@ -74,25 +102,27 @@ def callback():
     token_url, headers, body = req
     resp = requests.post(token_url, headers=headers, data=body)
 
-    #store the oauth credentials in our flask session
-    for key, val in resp.json().iteritems():
-        session[key] = val
-
-    #work around until I handle refresh tokens
-    with open('backup/tokens.py','w') as f:
-        f.write('tokens = {0}'.format(json.dumps(resp.json(), indent=2)))
+    #store the oauth credentials w/in our user
+    user.set_tokens(resp.json())
+    user.persist_user()
 
     return redirect(url_for('leaguer'))
 
 #figure out how this will work
 @app.route('/refresh', methods=['GET','POST'])
 def refresh():
-    league_obj = league(session['league_id'])
+    '''
+    Exchange refresh token for a new access token
+     Send: client_id, client_secret, redirect_uri, refresh_token, grant_type
+     Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
+    '''
+    user = User(load_user=session['user'])
+    league_obj = league(user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
     req = client.prepare_refresh_token_request(
         league.request_token_url,
-        refresh_token = session['refresh_token'],
+        refresh_token = user.refresh_token,
         client_id = league_obj.client_id,
         client_secret = league_obj.client_secret,
         redirect_uri = league_obj.redirect_url)
@@ -100,25 +130,23 @@ def refresh():
     token_url, headers, body = req
     resp = requests.post(token_url, headers=headers, data=body) 
 
-    with open('tokens2.py','w') as f:
-        f.write('tokens = {0}'.format(json.dumps(resp.json(), indent=2)))
-
-    #store the oauth credentials in our flask session
-    for key, val in resp.json().iteritems():
-        session[key] = val
+    #store the oauth credentials w/in our user
+    user.set_tokens(resp.json())
+    user.persist_user()
 
     return redirect(url_for('leaguer'))
 
 @app.route('/leaguer', methods=['GET','POST'])
 def leaguer():
-    league_obj = league(session['league_id'])
+    user = User(load_user=session['user'])
+    league_obj = league(user.league_id)
 
     payload = {
-        'format': 'json',
-        'access_token': tokens['access_token'],
         'use_login': '1',
+        'format': 'json',
+        'access_token': user.access_token,
     }
-    players_url = '{0}/league/{1}.l.{2}/players'.format(v2_url, '390', session['league_id'])
+    players_url = '{0}/league/{1}.l.{2}/players'.format(v2_url, '390', user.league_id)
 
     start = 0
     count_per = 25
@@ -129,12 +157,14 @@ def leaguer():
         url = '{0};count={1};start={2}'.format(players_url, count_per, start)
         resp = requests.get(url.format(start), params=payload)
 
+        #received an Unauthorized response
         if resp.status_code == 401:
-            new_tokens = refresh(tokens['refresh_token'])
+            refresh(user.refresh_token)
+            user = User(load_user=session['user'])
             status_code = 200
-            payload['access_token'] = new_tokens['access_token']
+            payload['access_token'] = user.access_token
             print 'payload',payload
-            print 'new_tokens',new_tokens
+            print 'user',user
             continue
 
         print '*'*30, resp.json(),'*'*30
