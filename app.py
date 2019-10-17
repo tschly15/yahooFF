@@ -2,7 +2,6 @@
 import json
 import requests
 from User import User
-from users import users
 from oauthlib.oauth2 import WebApplicationClient
 from flask import Flask, redirect, request, url_for, session, render_template
 
@@ -49,7 +48,8 @@ def home():
     if 'user_id' in request.form:
         user_id = request.form['user_id']
         try:
-            session['user'] = users[user_id]
+            #look up the user in the database
+            session['user'] = Users.get_user(user_id).to_json()
         except KeyError:
             user = User(user_id)
             session['user'] = user.to_json()
@@ -57,7 +57,7 @@ def home():
         else:
             return redirect(url_for('leaguer'))
 
-    user = User(load_user=session['user'])
+    user = User(load_web_user=session['user'])
     user.league_id = request.form['league_id']
     session['user'] = user.to_json()
 
@@ -71,7 +71,7 @@ def request_auth():
      Receive: authorization code
     '''
 
-    user = User(load_user=session['user'])
+    user = User(load_web_user=session['user'])
     league_obj = league(user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
@@ -89,7 +89,7 @@ def callback():
      Send: client_id, client_secret, redirect_uricode, grant_type
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
     '''
-    user = User(load_user=session['user'])
+    user = User(load_web_user=session['user'])
     league_obj = league(user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
@@ -116,7 +116,7 @@ def refresh():
      Send: client_id, client_secret, redirect_uri, refresh_token, grant_type
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
     '''
-    user = User(load_user=session['user'])
+    user = User(load_web_user=session['user'])
     league_obj = league(user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
@@ -138,7 +138,7 @@ def refresh():
 
 @app.route('/leaguer', methods=['GET','POST'])
 def leaguer():
-    user = User(load_user=session['user'])
+    user = User(load_web_user=session['user'])
     league_obj = league(user.league_id)
 
     payload = {
@@ -160,7 +160,7 @@ def leaguer():
         #received an Unauthorized response
         if resp.status_code == 401:
             refresh(user.refresh_token)
-            user = User(load_user=session['user'])
+            user = User(load_web_user=session['user'])
             status_code = 200
             payload['access_token'] = user.access_token
             print 'payload',payload
