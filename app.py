@@ -7,9 +7,14 @@ from flask import Flask, redirect, request, url_for, session, render_template
 
 #TODO:
 #fix yahoo login - there was an issue with my user, so I switched accounts
+#put in cpuengineer6 but yahoo listed cpuengineer5
 #use dpath
 #refresh the token
 #identify leagues by user, not league id
+
+#QUESTIONS:
+#is it better to serialize the user data w/in the session or do a db lookup each time
+# -- redis cache?
 
 app = Flask(__name__)
 app.secret_key = b'hdknbvmsebnapwema/daf864adfa1'
@@ -48,11 +53,11 @@ def home():
     if 'user_id' in request.form:
         user_id = request.form['user_id']
         try:
-            #look up the user in the database
-            session['user'] = Users.get_user(user_id).to_json()
+            #retrieve user data from the database
+            session['user'] = User.get_user(user_id).to_json()
         except KeyError:
-            user = User(user_id)
-            session['user'] = user.to_json()
+            #create new user and then serialize w/in session
+            session['user'] = User(user_id).to_json()
             return render_template('home.html', session=session, user_id=user_id)
         else:
             return redirect(url_for('leaguer'))
@@ -105,6 +110,7 @@ def callback():
     #store the oauth credentials w/in our user
     user.set_tokens(resp.json())
     user.persist_user()
+    session['user'] = user.to_json()
 
     return redirect(url_for('leaguer'))
 
@@ -133,6 +139,7 @@ def refresh():
     #store the oauth credentials w/in our user
     user.set_tokens(resp.json())
     user.persist_user()
+    session['user'] = user.to_json()
 
     return redirect(url_for('leaguer'))
 
@@ -146,7 +153,7 @@ def leaguer():
         'format': 'json',
         'access_token': user.access_token,
     }
-    players_url = '{0}/league/{1}.l.{2}/players'.format(v2_url, '390', user.league_id)
+    players_url = '{0}/league/{1}.l.{2}/players'.format(league.v2_url, '390', user.league_id)
 
     start = 0
     count_per = 25
@@ -159,7 +166,10 @@ def leaguer():
 
         #received an Unauthorized response
         if resp.status_code == 401:
+
+            #calling a view?
             refresh(user.refresh_token)
+
             user = User(load_web_user=session['user'])
             status_code = 200
             payload['access_token'] = user.access_token

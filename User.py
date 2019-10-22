@@ -20,6 +20,14 @@ class User(object):
         self.__dict__.update(dct)
 
     @staticmethod
+    def query_user(user_id):
+        db = _pg.connect("yahoo", user="terrence", passwd="terrence")
+        qry = "select 1 from users where user_id='{0}' limit 1"
+        res = db.query(qry.format(user_id)).dictresult()
+        db.close()
+        return res
+
+    @staticmethod
     def get_user(user_id):
         db = _pg.connect("yahoo", user="terrence", passwd="terrence")
         qry = "select * from users where user_id='{0}'"
@@ -27,7 +35,7 @@ class User(object):
         try:
             _user = db.query(qry.format(user_id)).dictresult()[0]
         except:
-            return "Could not locate user_id {0}".format(user_id)
+            raise KeyError
         else:
             return User(load_db_user=_user)
         finally:
@@ -37,14 +45,25 @@ class User(object):
         dct = vars(self) 
 
         db = _pg.connect("yahoo", user="terrence", passwd="terrence")
-        qry = "insert into users ({0}) values ({1})"
+
+        user_exists = self.query_user(self.user_id)
+        if user_exists:
+            action = 'updated'
+            flds = [ "{0}='{1}'".format(key, val)
+                     for key, val in dct.items() ]
+            qry = "update users set {0} where user_id='{1}'"\
+                    .format(','.join(flds), dct['user_id'])
+        else:
+            action = 'inserted'
+            qry = "insert into users ({0}) values ({1})"\
+                .format(','.join(dct.keys()), "'%s'" % "','".join(map(str,dct.values())))
 
         try:
-            db.query(qry.format(','.join(dct.keys()), "'%s'" % "','".join(dct.values())))
+            db.query(qry)
         except:
             print("Unable to load {0} into the database".format(self.user_id))
         else:
-            print("Successfully loaded {0} into the database".format(self.user_id))
+            print("Successfully {0} {1}".format(action, self.user_id))
         finally:
             db.close()
 
@@ -52,3 +71,5 @@ class User(object):
         return json.dumps(vars(self), indent=indent)
     def from_json(self, dct):
         self.__dict__ = json.loads(dct)
+    def __str__(self):
+        return self.to_json()
