@@ -9,7 +9,7 @@ from flask import Flask, redirect, request, url_for, session, render_template
 #fix yahoo login - there was an issue with my user, so I switched accounts
 #put in cpuengineer6 but yahoo listed cpuengineer5
 #use dpath
-#refresh the token
+#figure out the refresh token flow
 #identify leagues by user, not league id
 
 #QUESTIONS:
@@ -94,6 +94,7 @@ def callback():
      Send: client_id, client_secret, redirect_uricode, grant_type
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
     '''
+
     user = User(load_web_user=session['user'])
     league_obj = league(user.league_id)
 
@@ -114,14 +115,15 @@ def callback():
 
     return redirect(url_for('leaguer'))
 
-#figure out how this will work
 @app.route('/refresh', methods=['GET','POST'])
 def refresh():
     '''
     Exchange refresh token for a new access token
      Send: client_id, client_secret, redirect_uri, refresh_token, grant_type
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
+    Note: only the access_token will change (refresh_token does not change)
     '''
+
     user = User(load_web_user=session['user'])
     league_obj = league(user.league_id)
 
@@ -145,6 +147,7 @@ def refresh():
 
 @app.route('/leaguer', methods=['GET','POST'])
 def leaguer():
+
     user = User(load_web_user=session['user'])
     league_obj = league(user.league_id)
 
@@ -166,36 +169,26 @@ def leaguer():
 
         #received an Unauthorized response
         if resp.status_code == 401:
-
-            #calling a view?
-            refresh(user.refresh_token)
+            refresh() #renew our credentials
 
             user = User(load_web_user=session['user'])
             status_code = 200
             payload['access_token'] = user.access_token
-            print 'payload',payload
-            print 'user',user
             continue
 
-        print '*'*30, resp.json(),'*'*30
         dct = resp.json()['fantasy_content']
         for key, entry in dct.iteritems():
             print key, entry
 
+        try:
+            with open('output.json','a') as f:
+                f.write(json.dumps(dct, indent=2))
+        except Exception as e:
+            print 'failed to create the output file:',e.args
+
         status_code = resp.status_code
         raw_input((start, status_code))
-        start += increment
-
-    payload = {
-        'format': 'json',
-        'access_token': session['access_token'],
-    }
-
-    resp = requests.get(url.format('nfl',league_id),
-                        params=payload)
-    result = resp.json()
-
-    return result
+        start += count_per
 
 app.run(debug=True, ssl_context='adhoc', port=app.port)
 
