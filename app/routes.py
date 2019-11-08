@@ -1,24 +1,20 @@
 #!/usr/bin/env python
 import json
 import requests
-from User import User
+from app import app
+from app.User import User
 from oauthlib.oauth2 import WebApplicationClient
-from flask import Flask, redirect, request, url_for, session, render_template
+from flask import redirect, request, url_for, session, render_template
 
 #TODO:
 #fix yahoo login - there was an issue with my user, so I switched accounts
 #put in cpuengineer6 but yahoo listed cpuengineer5
 #use dpath
-#figure out the refresh token flow
 #identify leagues by user, not league id
 
 #QUESTIONS:
 #is it better to serialize the user data w/in the session or do a db lookup each time
 # -- redis cache?
-
-app = Flask(__name__)
-app.secret_key = b'hdknbvmsebnapwema/daf864adfa1'
-app.port = 5000
 
 class league(object):
     '''
@@ -54,7 +50,7 @@ def home():
         user_id = request.form['user_id']
         try:
             #retrieve user data from the database
-            session['user'] = User.get_user(user_id).to_json()
+            session['user'] = User.load_user(user_id).to_json()
         except KeyError:
             #create new user and then serialize w/in session
             session['user'] = User(user_id).to_json()
@@ -189,7 +185,4 @@ def leaguer():
         status_code = resp.status_code
         raw_input((start, status_code))
         start += count_per
-
-app.run(debug=True, ssl_context='adhoc', port=app.port)
-
 
