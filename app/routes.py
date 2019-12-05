@@ -4,17 +4,14 @@ import requests
 from app import app
 from app.User import User
 from oauthlib.oauth2 import WebApplicationClient
+from flask_login import current_user, login_user, login_required
 from flask import redirect, request, url_for, session, render_template
 
 #TODO:
-#fix yahoo login - there was an issue with my user, so I switched accounts
 #put in cpuengineer6 but yahoo listed cpuengineer5
+# --> caching issue? same for windycitylisa
+#identify all leagues belonging to a user
 #use dpath
-#identify leagues by user, not league id
-
-#QUESTIONS:
-#is it better to serialize the user data w/in the session or do a db lookup each time
-# -- redis cache?
 
 class league(object):
     '''
@@ -37,32 +34,29 @@ class league(object):
         self.redirect_url = "https://127.0.0.1:{0}/callback".format(app.port)
 
 
+@app.route('/logout', methods=['GET'])
+def logout():
+    for key in session.keys():
+        del session[key]
+    return redirect(url_for('login'))
+
 @app.route('/')
-@app.route('/home', methods=['GET','POST'])
-def home():
+@app.route('/login', methods=['GET','POST'])
+def login():
+
+    #if current_user.is_authenticated:
+        #return redirect(url_for('leaguer'))
 
     if request.method == 'GET':
-        for key in session.keys():
-            del session[key]
-        return render_template('home.html')
+        return render_template('login.html')
 
-    if 'user_id' in request.form:
-        user_id = request.form['user_id']
-        try:
-            #retrieve user data from the database
-            session['user'] = User.load_user(user_id).to_json()
-        except KeyError:
-            #create new user and then serialize w/in session
-            session['user'] = User(user_id).to_json()
-            return render_template('home.html', session=session, user_id=user_id)
-        else:
-            return redirect(url_for('leaguer'))
+    user = User(user_id=request.form['user_id'])
+    login_user(user)
 
-    user = User(load_web_user=session['user'])
-    user.league_id = request.form['league_id']
-    session['user'] = user.to_json()
+    current_user.league_id = '137260' #don't hardcode
+    current_user.persist_user()
 
-    return redirect(url_for('request_auth'))
+    return redirect(url_for('leaguer'))
 
 @app.route('/request_auth', methods=['GET'])
 def request_auth():
@@ -71,9 +65,7 @@ def request_auth():
      Send: client_id, redirect_uri, response_type
      Receive: authorization code
     '''
-
-    user = User(load_web_user=session['user'])
-    league_obj = league(user.league_id)
+    league_obj = league(current_user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
     req = client.prepare_authorization_request(
@@ -90,9 +82,7 @@ def callback():
      Send: client_id, client_secret, redirect_uricode, grant_type
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
     '''
-
-    user = User(load_web_user=session['user'])
-    league_obj = league(user.league_id)
+    league_obj = league(current_user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
     req = client.prepare_token_request(
@@ -104,10 +94,9 @@ def callback():
     token_url, headers, body = req
     resp = requests.post(token_url, headers=headers, data=body)
 
-    #store the oauth credentials w/in our user
-    user.set_tokens(resp.json())
-    user.persist_user()
-    session['user'] = user.to_json()
+    #permanently store user's oauth credentials
+    current_user.set_tokens(resp.json())
+    current_user.persist_user()
 
     return redirect(url_for('leaguer'))
 
@@ -119,14 +108,12 @@ def refresh():
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
     Note: only the access_token will change (refresh_token does not change)
     '''
-
-    user = User(load_web_user=session['user'])
-    league_obj = league(user.league_id)
+    league_obj = league(current_user.league_id)
 
     client = WebApplicationClient(league_obj.client_id)
     req = client.prepare_refresh_token_request(
         league.request_token_url,
-        refresh_token = user.refresh_token,
+        refresh_token = current_user.refresh_token,
         client_id = league_obj.client_id,
         client_secret = league_obj.client_secret,
         redirect_uri = league_obj.redirect_url)
@@ -134,28 +121,26 @@ def refresh():
     token_url, headers, body = req
     resp = requests.post(token_url, headers=headers, data=body) 
 
-    #store the oauth credentials w/in our user
-    user.set_tokens(resp.json())
-    user.persist_user()
-    session['user'] = user.to_json()
+    #permanently store user's oauth credentials
+    current_user.set_tokens(resp.json())
+    current_user.persist_user()
 
     return redirect(url_for('leaguer'))
 
 @app.route('/leaguer', methods=['GET','POST'])
+@login_required
 def leaguer():
-
-    user = User(load_web_user=session['user'])
-    league_obj = league(user.league_id)
+    league_obj = league(current_user.league_id)
 
     payload = {
         'use_login': '1',
         'format': 'json',
-        'access_token': user.access_token,
+        'access_token': current_user.access_token,
     }
-    players_url = '{0}/league/{1}.l.{2}/players'.format(league.v2_url, '390', user.league_id)
+    players_url = '{0}/league/{1}.l.{2}/players'.format(league.v2_url, '390', current_user.league_id)
 
     start = 0
-    count_per = 25
+    count_per = 2
     status_code = 200
 
     while status_code == 200:
@@ -165,11 +150,17 @@ def leaguer():
 
         #received an Unauthorized response
         if resp.status_code == 401:
-            refresh() #renew our credentials
 
-            user = User(load_web_user=session['user'])
+            if not current_user.refresh_token.strip():
+                return redirect(url_for('request_auth'))
+            else:
+                refresh() #renew our credentials
+
+            current_user.set_tokens(resp.json())
+            current_user.persist_user()
+
             status_code = 200
-            payload['access_token'] = user.access_token
+            payload['access_token'] = current_user.access_token
             continue
 
         dct = resp.json()['fantasy_content']
