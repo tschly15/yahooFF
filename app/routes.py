@@ -41,6 +41,8 @@ class team_cls(object):
                     setattr(self, k, str(v).strip())
 
     def get_league_info(self):
+
+        #team_key format: 390.l.137260.t.6 or 389.t.3081322
         team_key = getattr(self, 'team_key', None)
         if team_key is None:
             return
@@ -182,6 +184,8 @@ def get_user_leagues():
         'access_token': current_user.access_token,
     }
 
+
+    #TODO: wrap the response 401 functionality
     #will try to pull out the NFL teams for the logged-in user
     resp = requests.get(league.manager_leagues, params=payload)
 
@@ -193,8 +197,11 @@ def get_user_leagues():
         else:
             # renew our credentials ...
             refresh() 
+            payload['access_token'] = current_user.access_token
+
             # ... then try one more time
             resp = requests.get(league.manager_leagues, params=payload)
+    ##############################
 
     dct = resp.json()
     teams = dpath.util.get(dct, 'fantasy_content/users/0/user/[1]/teams')
@@ -231,6 +238,7 @@ def leaguer():
             return redirect(url_for('request_auth'))
         else:
             refresh() #renew our credentials
+            payload['access_token'] = current_user.access_token
 
             #will try to pull out the NFL teams for the logged-in user
             resp = requests.get(league_obj.manager_leagues, params=payload)
