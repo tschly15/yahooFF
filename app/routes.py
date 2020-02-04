@@ -5,8 +5,8 @@ import requests
 from app import app
 from app.User import User
 from oauthlib.oauth2 import WebApplicationClient
-from flask_login import current_user, login_user, login_required
 from flask import redirect, request, url_for, session, render_template
+from flask_login import current_user, login_user, login_required, logout_user
 
 #TODO:
 #put in cpuengineer6 but yahoo listed cpuengineer5
@@ -25,7 +25,7 @@ class authentication(object):
     client_secret = "30cbbae3cdf91d86d986bf5c08df5fb9bcf95acb"
     client_id = "dj0yJmk9ZkJpU2FlS2c3TWZFJmQ9WVdrOVNIQjFZMDk2TjJrbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTNi"
 
-    redirect_url = "https://127.0.0.1:{0}/callback".format(app.port)
+    redirect_url = "https://127.0.0.1:{0}/callback".format(app.config['PORT'])
 
 class team_cls(object):
     def __init__(self, x):
@@ -67,7 +67,11 @@ class team_cls(object):
         league_name = league_dict['name']
         league_season = league_dict['season']
 
-        print "Welcome to {0} {1}!\nVisit at {2}".format(league_name, league_season, league_url)
+        #identify leagues preceding/following league id (if applicable)
+        league_renew = league_dict['renew']
+        league_renewed = league_dict['renewed']
+
+        #print "Welcome to {0} {1}!\nVisit at {2}".format(league_name, league_season, league_url)
 
 
     def __str__(self):
@@ -91,17 +95,14 @@ class league(object):
 
 
 @app.route('/logout', methods=['GET'])
+@login_required
 def logout():
-    for key in session.keys():
-        del session[key]
+    logout_user()
     return redirect(url_for('login'))
 
 @app.route('/')
 @app.route('/login', methods=['GET','POST'])
 def login():
-
-    #if current_user.is_authenticated:
-        #return redirect(url_for('leaguer'))
 
     if request.method == 'GET':
         return render_template('login.html')
@@ -183,7 +184,6 @@ def get_user_leagues():
         'format': 'json',
         'access_token': current_user.access_token,
     }
-
 
     #TODO: wrap the response 401 functionality
     #will try to pull out the NFL teams for the logged-in user

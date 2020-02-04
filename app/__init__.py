@@ -1,11 +1,17 @@
 from flask import Flask
 from flask_login import LoginManager
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from config import Config
 
 app = Flask(__name__)
-app.secret_key = b'hdknbvmsebnapwema/daf864adfa1'
-app.port = 5000
+app.config.from_object(Config)
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+login_manager.refresh_view = 'refresh'
 
-from app import routes
+db = SQLAlchemy(app)
+migrate = Migrate(app)
+
+from app import routes, models
