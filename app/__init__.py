@@ -14,5 +14,4 @@ login_manager.refresh_view = 'refresh'
 db = SQLAlchemy(app)
 migrate = Migrate(app)
 
-from app.views.login import yahoo_oauth
-from app.models import models
+from app import routes, models
