@@ -8,7 +8,8 @@ pip install cffi --upgrade
 pip install enum34 ipaddress
 pip install pyOpenSSL==19.0.0
 pip install cryptography==2.7
-pip install flask requests oauthlib dpath
+pip install flask requests oauthlib
+pip install dpath==1.4.2
 pip install pygresql
 pip install flask_login
 pip install flask-sqlalchemy
