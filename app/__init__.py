@@ -15,3 +15,4 @@ db = SQLAlchemy(app)
 migrate = Migrate(app)
 
 from app import routes, models
+from app.views import authentication

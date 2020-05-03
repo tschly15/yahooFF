@@ -3,6 +3,7 @@ import json
 import dpath
 import requests
 from app import app
+from app.views.authentication import refresh, yahoo_oauth2
 from app.User import User
 from oauthlib.oauth2 import WebApplicationClient
 from flask import redirect, request, url_for, session, render_template
@@ -12,20 +13,7 @@ from flask_login import current_user, login_user, login_required, logout_user
 #put in cpuengineer6 but yahoo listed cpuengineer5
 # --> caching issue? same for windycitylisa
 
-class authentication(object):
-    #app_id = "HpucOz7i" #do i need this?
 
-    base_url = "https://football.fantasysports.yahoo.com/f1"
-    v2_url = "https://fantasysports.yahooapis.com/fantasy/v2"
-
-    oauth2_base_url = "https://api.login.yahoo.com/oauth2"
-    request_auth_url = "{0}/request_auth".format(oauth2_base_url)
-    request_token_url = "{0}/get_token".format(oauth2_base_url) #doubles as refresh token url
-
-    client_secret = "30cbbae3cdf91d86d986bf5c08df5fb9bcf95acb"
-    client_id = "dj0yJmk9ZkJpU2FlS2c3TWZFJmQ9WVdrOVNIQjFZMDk2TjJrbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTNi"
-
-    redirect_url = "https://127.0.0.1:{0}/callback".format(app.config['PORT'])
 
 class team_cls(object):
     def __init__(self, x):
@@ -48,7 +36,7 @@ class team_cls(object):
             return
 
         #we now have the team key, so get the league information
-        url = '{0}/league/{1}'.format(authentication.v2_url, team_key.rsplit('.',2)[0])
+        url = '{0}/league/{1}'.format(yahoo_oauth2.v2_url, team_key.rsplit('.',2)[0])
 
         payload = {
             'format': 'json',
@@ -87,94 +75,11 @@ class league(object):
     '''
 
     #data retrieval urls
-    manager_leagues = "{0}/users;use_login=1;game_keys=nfl/teams".format(authentication.v2_url)
-    manager_current_league = "{0}/users;use_login=1/games;game_keys=nfl/teams".format(authentication.v2_url)
+    manager_leagues = "{0}/users;use_login=1;game_keys=nfl/teams".format(yahoo_oauth2.v2_url)
+    manager_current_league = "{0}/users;use_login=1/games;game_keys=nfl/teams".format(yahoo_oauth2.v2_url)
 
     def __init__(self, league_id):
-        self.url = "{0}/{1}".format(authentication.base_url, league_id)
-
-
-@app.route('/logout', methods=['GET'])
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
-
-@app.route('/')
-@app.route('/login', methods=['GET','POST'])
-def login():
-
-    if request.method == 'GET':
-        return render_template('login.html')
-
-    user = User(user_id=request.form['user_id'])
-    login_user(user)
-    current_user.persist_user()
-
-    return redirect(url_for('get_user_leagues'))
-
-@app.route('/request_auth', methods=['GET'])
-def request_auth():
-    '''
-    Request an authorization URL
-     Send: client_id, redirect_uri, response_type
-     Receive: authorization code
-    '''
-    client = WebApplicationClient(authentication.client_id)
-    req = client.prepare_authorization_request(
-            authentication.request_auth_url,
-            redirect_url = authentication.redirect_url)
-
-    auth_url, headers, body = req
-    return redirect(auth_url)
-
-@app.route('/callback', methods=['GET','POST'])
-def callback():
-    '''
-    Exchange authorization code for access token
-     Send: client_id, client_secret, redirect_uricode, grant_type
-     Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
-    '''
-    client = WebApplicationClient(authentication.client_id)
-    req = client.prepare_token_request(
-            authentication.request_token_url,
-            authorization_response=request.url, ##what is this?
-            redirect_url = authentication.redirect_url,
-            client_secret = authentication.client_secret)
-
-    token_url, headers, body = req
-    resp = requests.post(token_url, headers=headers, data=body)
-
-    #permanently store user's oauth credentials
-    current_user.set_tokens(resp.json())
-    current_user.persist_user()
-
-    return redirect(url_for('get_user_leagues'))
-
-@app.route('/refresh', methods=['GET','POST'])
-def refresh():
-    '''
-    Exchange refresh token for a new access token
-     Send: client_id, client_secret, redirect_uri, refresh_token, grant_type
-     Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
-    Note: only the access_token will change (refresh_token does not change)
-    '''
-    client = WebApplicationClient(authentication.client_id)
-    req = client.prepare_refresh_token_request(
-        authentication.request_token_url,
-        refresh_token = current_user.refresh_token,
-        client_id = authentication.client_id,
-        client_secret = authentication.client_secret,
-        redirect_uri = authentication.redirect_url)
-
-    token_url, headers, body = req
-    resp = requests.post(token_url, headers=headers, data=body) 
-
-    #permanently store user's oauth credentials
-    current_user.set_tokens(resp.json())
-    current_user.persist_user()
-
-    return redirect(url_for('get_user_leagues'))
+        self.url = "{0}/{1}".format(yahoo_oauth2.base_url, league_id)
 
 @app.route('/get_user_leagues', methods=['GET','POST'])
 @login_required
