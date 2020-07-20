@@ -12,3 +12,7 @@ class yahoo_oauth2(object):
     redirect_url = "https://127.0.0.1:{0}/callback".format(app.config['PORT'])
 
     teams_url = v2_url + '/users;use_login=1;game_keys=nfl/teams'
+
+    league_key = 'nfl.l.11609'
+    league_url = v2_url + '/league/' + league_key
+    player_url = league_url + '/players;player_keys=nfl.p.5479'

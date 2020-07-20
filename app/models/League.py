@@ -33,3 +33,7 @@ class League(db.Model):
 
     def __repr__(self):
         return '{0} {1} {2} {3}'.format(self.name, self.game_code, self.season, self.league_key)
+
+    def __init__(self, d):
+        p = d['fantasy_content']['league'][0]
+        self.__dict__.update(p)
