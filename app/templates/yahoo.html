@@ -1,15 +1,10 @@
 <html>
     <body>
-    <h1>Welcome</h1>
+    <h1>Welcome {{ current_user.user_name }}</h1>
     <div class="user">
-        <form action="/login" method="post">
-            <p>User Name:
-                <input type="text" name="user_name"/>
-            </p>
-            <p>Password:
-                <input type="password" name="user_password"/>
-            </p>
-            <input type="submit" name="submit" value="Log In"/>
+        <form action="/request_auth" method="get">
+            <p>Click here to login to Yahoo!</p>
+            <input type="submit" name="submit" value="Go to Yahoo!"/>
         </form>
     </div>
     <div class="flash">

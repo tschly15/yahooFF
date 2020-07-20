@@ -1,44 +1,61 @@
 import requests
-from app import app
-from app.User import User
+from app import app, db
+from app.models.User import User
+from app.models.Misc import yahoo_oauth2
 from oauthlib.oauth2 import WebApplicationClient
-from flask import redirect, request, url_for, render_template
+from flask import redirect, request, url_for, render_template, flash
 from flask_login import current_user, login_user, login_required, logout_user
 
-class yahoo_oauth2(object):
-    #app_id = "HpucOz7i" #do i need this?
-
-    base_url = "https://football.fantasysports.yahoo.com/f1"
-    v2_url = "https://fantasysports.yahooapis.com/fantasy/v2"
-
-    oauth2_base_url = "https://api.login.yahoo.com/oauth2"
-    request_auth_url = "{0}/request_auth".format(oauth2_base_url)
-    request_token_url = "{0}/get_token".format(oauth2_base_url) #doubles as refresh token url
-
-    client_secret = "30cbbae3cdf91d86d986bf5c08df5fb9bcf95acb"
-    client_id = "dj0yJmk9ZkJpU2FlS2c3TWZFJmQ9WVdrOVNIQjFZMDk2TjJrbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTNi"
-
-    redirect_url = "https://127.0.0.1:{0}/callback".format(app.config['PORT'])
-
-
-@app.route('/logout', methods=['GET'])
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
-
-@app.route('/')
 @app.route('/login', methods=['GET','POST'])
 def login():
+    '''
+    log into my site
+    '''
 
-    if request.method == 'GET':
-        return render_template('login.html')
+    #alleviate cookie issues by always logging out
+    if current_user.is_authenticated:
+        logout_user()
+        flash("Logged you out")
+        return redirect(url_for('login'))
 
-    user = User(user_id=request.form['user_id'])
-    login_user(user)
-    current_user.persist_user()
+    if request.method == 'POST':
+        input_name = request.form['user_name']
+        input_password = request.form['user_password']
 
-    return redirect(url_for('get_user_leagues'))
+        #check if User exists in the database
+        user = User.query.filter_by(user_name=input_name).first()
+        if user is None or not user.check_password(input_password):
+            flash("Invalid username or password")
+            return redirect(url_for('login'))
+
+        login_user(user)
+
+        next_page = request.args.get('next')
+        if not (next_page and url_parse(next_page).netloc):
+            next_page = url_for('user_home')
+        return redirect(next_page)
+
+    return render_template('login.html')
+
+@login_required
+@app.route('/user_home', methods=['GET','POST'])
+def user_home():
+    ''' log into Yahoo '''
+
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+
+    access_token = current_user.user_access_token.strip()
+    if access_token:
+        return redirect(url_for('home'))
+
+    #attempt to refresh a stale Yahoo session
+    refresh_token = current_user.user_refresh_token.strip()
+    if refresh_token:
+        return redirect(url_for('refresh'))
+
+    #send them to login at Yahoo
+    return render_template('yahoo.html')
 
 @app.route('/request_auth', methods=['GET'])
 def request_auth():
@@ -47,7 +64,7 @@ def request_auth():
      Send: client_id, redirect_uri, response_type
      Receive: authorization code
     '''
-    client = WebApplicationClient(yahoo_oauth2.client_id)
+    client = WebApplicationClient(app.config['CLIENT_ID'])
     req = client.prepare_authorization_request(
             yahoo_oauth2.request_auth_url,
             redirect_url = yahoo_oauth2.redirect_url)
@@ -62,21 +79,24 @@ def callback():
      Send: client_id, client_secret, redirect_uricode, grant_type
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
     '''
-    client = WebApplicationClient(yahoo_oauth2.client_id)
+    client = WebApplicationClient(app.config['CLIENT_ID'])
     req = client.prepare_token_request(
             yahoo_oauth2.request_token_url,
             authorization_response=request.url, ##what is this?
             redirect_url = yahoo_oauth2.redirect_url,
-            client_secret = yahoo_oauth2.client_secret)
+            client_secret = app.config['CLIENT_SECRET'])
 
     token_url, headers, body = req
     resp = requests.post(token_url, headers=headers, data=body)
 
-    #permanently store user's oauth credentials
+    #update the user object with the (response) token data
     current_user.set_tokens(resp.json())
-    current_user.persist_user()
 
-    return redirect(url_for('get_user_leagues'))
+    #permanently store user's oauth credentials
+    db.session.add(current_user)
+    db.session.commit()
+
+    return redirect(url_for('home'))
 
 @app.route('/refresh', methods=['GET','POST'])
 def refresh():
@@ -86,19 +106,59 @@ def refresh():
      Receive: access_token, token_type, expire_in, refresh_token, xoauth_yahoo_guid
     Note: only the access_token will change (refresh_token does not change)
     '''
-    client = WebApplicationClient(yahoo_oauth2.client_id)
+    client = WebApplicationClient(app.config['CLIENT_ID'])
     req = client.prepare_refresh_token_request(
         yahoo_oauth2.request_token_url,
-        refresh_token = current_user.refresh_token,
-        client_id = yahoo_oauth2.client_id,
-        client_secret = yahoo_oauth2.client_secret,
+        refresh_token = current_user.user_refresh_token,
+        client_id = app.config['CLIENT_ID'],
+        client_secret = app.config['CLIENT_SECRET'],
         redirect_uri = yahoo_oauth2.redirect_url)
 
     token_url, headers, body = req
     resp = requests.post(token_url, headers=headers, data=body) 
 
-    #permanently store user's oauth credentials
-    current_user.set_tokens(resp.json())
-    current_user.persist_user()
+    if resp.status_code == 400:
+        abort(400, resp.json()['error'])
 
-    return redirect(url_for('get_user_leagues'))
+    #update the user object with the (response) token data
+    current_user.set_tokens(resp.json())
+
+    #permanently store user's oauth credentials
+    db.session.add(current_user)
+    db.session.commit()
+
+    return redirect(url_for('home'))
+
+@app.route('/logout', methods=['GET'])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.errorhandler(400)
+def custom_400(error):
+    '''remove tokens to force login'''
+
+    current_user.user_access_token = ''
+    current_user.user_refresh_token = ''
+    try:
+        db.session.add(current_user)
+        db.session.commit()
+    except Exception as e:
+        print e.args
+    
+    flash("Your Yahoo! credentials were invalid. Please login")
+    return redirect(url_for('user_home'))
+
+@app.errorhandler(401)
+def custom_401(error):
+    '''
+    remove user's access token
+    their refresh token may get them back in
+    '''
+    current_user.user_access_token = ''
+    db.session.add(current_user)
+    db.session.commit()
+    
+    flash("Your Yahoo! credentials have expired. Please login")
+    return redirect(url_for('user_home'))
