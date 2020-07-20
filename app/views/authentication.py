@@ -90,7 +90,7 @@ def callback():
     resp = requests.post(token_url, headers=headers, data=body)
 
     #update the user object with the (response) token data
-    current_user.set_tokens(resp.json())
+    current_user.set_oauth_tokens(resp.json())
 
     #permanently store user's oauth credentials
     db.session.add(current_user)
@@ -121,7 +121,7 @@ def refresh():
         abort(400, resp.json()['error'])
 
     #update the user object with the (response) token data
-    current_user.set_tokens(resp.json())
+    current_user.set_oauth_tokens(resp.json())
 
     #permanently store user's oauth credentials
     db.session.add(current_user)

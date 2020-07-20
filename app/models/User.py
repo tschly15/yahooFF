@@ -26,7 +26,7 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.user_password_hash.strip(), password)
 
-    def set_tokens(self, dct):
+    def set_oauth_tokens(self, dct):
         self.user_expires_in = dct['expires_in']
         self.user_token_type = dct['token_type']
         self.user_access_token = dct['access_token']
