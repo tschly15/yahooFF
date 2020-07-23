@@ -30,162 +30,57 @@ class Team(db.Model):
     def __repr__(self):
         return '{0}, managed by {1}'.format(self.team_name, self.manager1_nickname)
 
-    def __init__(self, d):
-        p = d['fantasy_content']['users']['0']['user'][1]['teams']
-        for tid, team_dct in p.iteritems():
-
-            if tid == 'count':
-                continue
-            
-            team = team_dct['team']
-            if isinstance(team, dict):
-                try:
-                    url = team['url']
-                except KeyError:
-                    continue
-                name = team['name']
-                team_key = team['team_key']
-
-
-            else:
-
-                for item in team_dct['team']:
-                    for dct in item:
-                        if 'team_logos' in dct:
-
-                        print 'dct',dct
-                        #print tid, team_dct['team']['name'], team_dct['team']['team_key']
-                        print
-                    break
-                break
+    def __init__(self, team):
+        self.team_name = 'default'
+        self.manager1_nickname = 'default'
         
-    
+        if isinstance(team, dict):
+            try:
+                self.url = team['url']
+            except KeyError:
+                return
 
-    '''
-    dct {u'team_key': u'399.l.11609.t.9'}
+            self.team_id = team['team_id']
+            self.team_name = team['name']
+            self.team_key = team['team_key']
+            self.team_email = team.get('email_address','')
+            self.manager1_nickname = team.get('user_display_name','Gil')
 
-    dct {u'team_id': u'9'}
+        else:
 
-    dct {u'name': u'Thx for the F shack'}
+            for item in team:
+                for dct in item:
 
-    dct {u'is_owned_by_current_login': 1}
+                    if not dct:
+                        continue
 
-    dct {u'url': u'https://football.fantasysports.yahoo.com/f1/11609/9'}
+                    keys = dct.keys()
+                    #NOTE: only for testing
+                    if len(keys) > 1:
+                        if 'draft_grade' not in keys:
+                            print '&'*50, dct
+                            continue
 
-    dct {u'team_logos': [{u'team_logo': {u'url': u'https://s.yimg.com/cv/apiv2/default/nfl/nfl_1.png', u'size': u'large'}}]}
+                    key = keys[0]
 
-    dct []
-
-    dct {u'waiver_priority': u''}
-
-    dct []
-
-    dct {u'number_of_moves': 0}
-
-    dct {u'number_of_trades': 0}
-
-    dct {u'roster_adds': {u'coverage_type': u'week', u'coverage_value': u'1', u'value': u'0'}}
-
-    dct []
-
-    dct {u'league_scoring_type': u'head'}
-
-    dct []
-
-    dct []
-
-    dct {u'has_draft_grade': 0}
-
-    dct []
-
-    dct []
-
-    dct {u'managers': [{u'manager': {u'nickname': u'Terrence', u'is_commissioner': u'1', u'image_url': u'https://s.yimg.com/ag/images/default_user_profile_pic_64sq.jpg', u'manager_id': u'9', u'guid': u'TZXDXM5R66MQIM7FAZ3YR5J55A', u'is_current_login': u'1', u'email': u'cpuengineer5@yahoo.com'}}]}
-
-
-    [
-      {"team_key": "390.l.137260.t.6" },
-      {"team_id": "6" },
-      {"name": "Thx for the F shack" },
-      {"is_owned_by_current_login": 1 },
-      { "url": "https://football.fantasysports.yahoo.com/2019/f1/137260/6" },
-      {
-        "team_logos": [
-          {
-            "team_logo": {
-              "url": "https://s.yimg.com/cv/apiv2/default/nfl/nfl_1.png", 
-              "size": "large"
-            }
-          }
-        ]
-      }, 
-      [], 
-      { "waiver_priority": 11 },
-      [], 
-      { "number_of_moves": "47" },
-      { "number_of_trades": 0 },
-      {
-        "roster_adds": {
-          "coverage_type": "week", 
-          "coverage_value": "17", 
-          "value": "0"
-        }
-      }, 
-      { "clinched_playoffs": 1 },
-      { "league_scoring_type": "head" },
-      [], 
-      [],
-      {
-        "draft_recap_url": "https://football.fantasysports.yahoo.com/2019/f1/137260/6/draftrecap",
-        "draft_grade": "A",
-        "has_draft_grade": 1
-      },
-      [],
-      [],
-      {
-        "managers": [
-          {
-            "manager": {
-              "is_current_login": "1",
-              "image_url": "https://s.yimg.com/ag/images/default_user_profile_pic_64sq.jpg",
-              "manager_id": "6",
-              "guid": "TZXDXM5R66MQIM7FAZ3YR5J55A",
-              "nickname": "Terrence",
-              "email": "cpuengineer5@yahoo.com"
-            }
-          }
-        ]
-      }
-    ]
-    '''
-
-        p = d['fantasy_content']['league'][1]['players']['0']['player'][0]
-
-        dct = {}
-        for item in p:
-
-            if not isinstance(item, dict):
-                continue
-
-            elif any([ item.get(key)
-                for key in ('headshot','eligible_positions','image_url') ]):
-                    continue
-
-            elif item.get('name'):
-                for name_key, value in item.get('name').iteritems():
-                    dct['name_{0}'.format(name_key)] = value
-
-            elif item.get('bye_weeks'):
-                dct['bye_week'] = item['bye_weeks']['week']
-
-            #suppressing because this is league dependent
-            #elif item.get('eligible_positions'):
-            #    dct['eligible_positions'] = ', '.join([
-            #        pos.values()[0] for pos in item['eligible_positions'] ])
-
-            else:
-                dct.update(item)
-
-        self.__dict__.update(dct)
-
-
+                    if 'draft_grade' in keys:
+                        self.draft_grade = dct[key]
+                    elif key == 'name':
+                        self.team_name = dct[key]
+                    elif key == 'team_logos':
+                        self.team_logo = dct[key][0]['team_logo']['url']
+                    elif key == 'roster_adds':
+                        self.roster_adds = dct[key]['value']
+                    elif key == 'managers':
+                        for idx, mdct in enumerate(dct[key], 1):
+                            base = 'manager{0}'.format(idx)
+                            manager_dct = {
+                                 '{0}_nickname'.format(base): mdct['manager']['nickname'],
+                                 '{0}_is_commissioner'.format(base): mdct['manager'].get('is_commissioner','0'),
+                                 '{0}_image_url'.format(base): mdct['manager']['image_url'],
+                                 '{0}_id'.format(base): mdct['manager']['manager_id'],
+                                 '{0}_email'.format(base): mdct['manager'].get('email',''),
+                            }
+                            self.__dict__.update(manager_dct)
+                    else:
+                        self.__dict__.update(dct)

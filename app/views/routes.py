@@ -23,8 +23,12 @@ def home():
 
     print '-'*20,'TEAM','-'*20
     d = r.json()
-    team = Team(d)
-    print team
+    p = d['fantasy_content']['users']['0']['user'][1]['teams']
+    for tid, team_dct in p.iteritems():
+        if tid == 'count':
+            continue
+        r = Team(team_dct['team'])
+        print r
 
     num_teams = len(d['fantasy_content']['users']['0']['user'][1]['teams'])
     return '{0} owns {1} teams'.format(current_user.user_name, num_teams)
