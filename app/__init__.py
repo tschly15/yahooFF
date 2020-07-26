@@ -12,7 +12,7 @@ login_manager.login_view = 'login'
 login_manager.refresh_view = 'refresh'
 
 db = SQLAlchemy(app)
-migrate = Migrate(app)
+migrate = Migrate(app, db)
 
 from app.models import User, League, Misc
 from app.views import authentication, routes

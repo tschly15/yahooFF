@@ -1,11 +1,12 @@
 from app import db
+from app.models.Misc import Roster
+from app.models.Player import Player
 
 class Team(db.Model):
     __tablename__ = 'team'
 
-    pk = db.Column(db.Integer, primary_key=True)
-    team_id = db.Column(db.Integer, unique=True) #9
-    team_key = db.Column(db.String(30), unique=True, index=True) #399.l.11609.t.9
+    team_key = db.Column(db.String(30), primary_key=True, index=True) #399.l.11609.t.9
+    team_id = db.Column(db.Integer) #9
     team_name = db.Column(db.String(40)) #Thx for the F shack
     team_url = db.Column(db.VARCHAR) #https://football.fantasysports.yahoo.com/f1/11609/9
     team_logo = db.Column(db.VARCHAR) #https://s.yimg.com/cv/apiv2/default/nfl/nfl_1.png
@@ -26,6 +27,8 @@ class Team(db.Model):
     manager2_image_url = db.Column(db.VARCHAR) #https://s.yimg.com/ag/images/default_user_profile_pic_64sq.jpg
     manager2_id = db.Column(db.String(10)) #9
     manager2_email = db.Column(db.String(100)) #cpuengineer5@yahoo.com
+
+    players = db.relationship(Player, secondary=Roster, backref=db.backref('Roster', lazy='dynamic'))
 
     def __repr__(self):
         return '{0}, managed by {1}'.format(self.team_name, self.manager1_nickname)

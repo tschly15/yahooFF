@@ -1,9 +1,13 @@
 from app import db, login_manager
+
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
+#TODO: user_id is not necessary. will load_user/get_user work using user_name?
+
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
+
     user_id = db.Column(db.Integer, primary_key=True)
     user_name = db.Column(db.String(30), unique=True, index=True)
     user_email = db.Column(db.String(120), unique=True)
@@ -15,6 +19,8 @@ class User(UserMixin, db.Model):
     user_access_token = db.Column(db.VARCHAR)
     user_refresh_token = db.Column(db.String(120))
     
+    #leagues = db.relationship(League, secondary=roster, backref=db.backref('roster', lazy='dynamic'))
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(user_id)

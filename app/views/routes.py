@@ -21,17 +21,17 @@ def home():
     if r.status_code == 401:
         abort(401)
 
-    print '-'*20,'TEAM','-'*20
     d = r.json()
+
+    teams = []
     p = d['fantasy_content']['users']['0']['user'][1]['teams']
     for tid, team_dct in p.iteritems():
         if tid == 'count':
             continue
-        r = Team(team_dct['team'])
-        print r
+        teams.append(Team(team_dct['team']))
 
-    num_teams = len(d['fantasy_content']['users']['0']['user'][1]['teams'])
-    return '{0} owns {1} teams'.format(current_user.user_name, num_teams)
+    return 'a'+str(len(teams))
+    return render_template('teams.html', teams)
 
     '''
     r = requests.get(yahoo_oauth2.league_url, params=params)

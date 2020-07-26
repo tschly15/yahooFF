@@ -3,9 +3,8 @@ from app import db
 class Player(db.Model):
     __tablename__ = 'player'
 
-    pk = db.Column(db.Integer, primary_key=True)
-    player_id = db.Column(db.Integer, unique=True) #5479
-    player_key = db.Column(db.String(20), unique=True, index=True) #399.p.5479
+    player_key = db.Column(db.String(20), primary_key=True, index=True) #399.p.5479
+    player_id = db.Column(db.Integer) #5479
     name_full = db.Column(db.String(80)) #Drew Brees
     name_first = db.Column(db.String(40)) #Drew
     name_last = db.Column(db.String(50)) #Brees
