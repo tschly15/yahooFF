@@ -3,7 +3,7 @@ import os
 from app import app
 
 #use for 'flask db init'
-if True:
+if False:
     import logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)

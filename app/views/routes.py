@@ -15,7 +15,8 @@ def index():
 @login_required
 @app.route('/home', methods=['GET'])
 def home():
-    params = {'access_token': current_user.user_access_token.strip(), 'format':'json'}
+    params = {'format':'json',
+            'access_token': current_user.user_access_token.strip()}
 
     r = requests.get(yahoo_oauth2.teams_url, params=params)
     if r.status_code == 401:
@@ -30,29 +31,9 @@ def home():
             continue
         teams.append(Team(team_dct['team']))
 
-    return 'a'+str(len(teams))
-    return render_template('teams.html', teams)
+    return render_template('teams.html', teams=teams)
 
-    '''
-    r = requests.get(yahoo_oauth2.league_url, params=params)
-    if r.status_code == 401:
-        abort(401)
-    print '-'*20,'LEAGUE','-'*20
-    print r.json()
-    print '-'*50
-
-    l = League(r.json())
-    print l
-
-    print '-'*20,'PLAYER','-'*20
-    r = requests.get(yahoo_oauth2.player_url, params=params)
-    if r.status_code == 401:
-        abort(401)
-    print r.json()
-    print '-'*50
-
-    p = Player(r.json())
-    print p
-    '''
-
-
+@login_required
+@app.route('/draft', methods=['GET','POST'])
+def draft():
+    return "you're drafting {0}".format(request.form['team'])

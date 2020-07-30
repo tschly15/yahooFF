@@ -1,0 +1,10 @@
+<html>
+    <body>
+        <h1>Select a draft</h1>
+        <form action="/draft" method="post">
+            {% for team in teams %}
+                <input type="submit" name="team" value="{{ team }}"/>
+            {% endfor %}
+        </form>
+    </body>
+</html>

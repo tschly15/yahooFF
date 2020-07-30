@@ -1,6 +1,6 @@
 from app import db
-from app.models.Misc import Roster
 from app.models.Player import Player
+from app.models.Roster import Roster
 
 class Team(db.Model):
     __tablename__ = 'team'
