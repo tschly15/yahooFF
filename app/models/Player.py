@@ -22,8 +22,8 @@ class Player(db.Model):
     bye_week = db.Column(db.String(10)) #6
     #eligible_position = db.Column(db.String(50)) #QB, Q/W/R/T
 
-    def __init__(self, d):
-        p = d['fantasy_content']['league'][1]['players']['0']['player'][0]
+    def __init__(self, p):
+        #p = d['fantasy_content']['league'][1]['players']['0']['player'][0]
 
         dct = {}
         for item in p:

@@ -4,7 +4,7 @@ class League(db.Model):
     __tablename__ = 'league'
 
     start_week = db.Column(db.Integer) #1
-    iris_group_chat_id = db.Column(db.String(10))
+    iris_group_chat_id = db.Column(db.String(30)) #NYJDUVCKRZEXFOD7SWO2IH74TQ
     league_key = db.Column(db.String(20), index=True, primary_key=True) #348.l.222713
     edit_key = db.Column(db.Integer) #16
     allow_add_to_dl_extra_pos = db.Column(db.Integer) #0

@@ -43,8 +43,54 @@ def home():
 @login_required
 @app.route('/draft', methods=['GET','POST'])
 def draft():
-    #retrieve all applicable players
+    '''
+    use the team key to identify the league_key
+    create the League object and store in db
+    '''
     team_key = request.form['team_key']
     team = Team.query.filter_by(team_key=team_key).first()
 
-    return "you're drafting {0}".format(team)
+    params = {'format':'json',
+            'access_token': current_user.user_access_token.strip()}
+
+    league_key = team_key.rsplit('.',2)[0]
+    league_url = yahoo_oauth2.league_url + league_key
+
+    r = requests.get(league_url, params=params)
+    if r.status_code == 401:
+        abort(401)
+
+    league = League(r.json())
+    #load the team into the database, if not already there
+    if League.query.filter_by(league_key=league.league_key).first() is None:
+        db.session.add(league)
+        db.session.commit()
+
+    if True:
+        #retrieve all applicable players
+        start = 0
+        count_per_request = 25
+        while True:
+
+            player_url = yahoo_oauth2.format(
+                league_url, start, count_per_request)
+
+            r = requests.get(player_url, params=params)
+            if r.status_code == 401:
+                abort(401)
+
+            d = r.json()
+            players = d['fantasy_content']['league'][1]['players']
+
+            count = int(players.pop('count',0))
+            if not count:
+                break
+        
+            for player_dct in players.values():
+                player = Player(player_dct['player'][0])
+                db.session.add(player)
+                db.session.commit()
+
+            start += count
+
+    return "you're drafting {0}".format('1')
