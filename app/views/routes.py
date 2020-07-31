@@ -1,5 +1,5 @@
 import requests
-from app import app
+from app import app, db
 from app.models.Team import Team 
 from app.models.League import League
 from app.models.Player import Player
@@ -29,11 +29,22 @@ def home():
     for tid, team_dct in p.iteritems():
         if tid == 'count':
             continue
-        teams.append(Team(team_dct['team']))
+
+        team = Team(team_dct['team'])
+        teams.append(team)
+
+        #load the team into the database, if not already there
+        if Team.query.filter_by(team_key=team.team_key).first() is None:
+            db.session.add(team)
+            db.session.commit()
 
     return render_template('teams.html', teams=teams)
 
 @login_required
 @app.route('/draft', methods=['GET','POST'])
 def draft():
-    return "you're drafting {0}".format(request.form['team'])
+    #retrieve all applicable players
+    team_key = request.form['team_key']
+    team = Team.query.filter_by(team_key=team_key).first()
+
+    return "you're drafting {0}".format(team)
