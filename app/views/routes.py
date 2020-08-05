@@ -60,19 +60,20 @@ def draft():
     if r.status_code == 401:
         abort(401)
 
+    #TODO: incorporate league settings
     league = League(r.json())
     #load the team into the database, if not already there
     if League.query.filter_by(league_key=league.league_key).first() is None:
         db.session.add(league)
         db.session.commit()
 
-    if True:
+    if False:
         #retrieve all applicable players
         start = 0
         count_per_request = 25
         while True:
 
-            player_url = yahoo_oauth2.format(
+            player_url = yahoo_oauth2.player_url.format(
                 league_url, start, count_per_request)
 
             r = requests.get(player_url, params=params)
@@ -82,8 +83,8 @@ def draft():
             d = r.json()
             players = d['fantasy_content']['league'][1]['players']
 
-            count = int(players.pop('count',0))
-            if not count:
+            #list of players has been exhausted
+            if 'count' not in players or int(players.pop('count')) == 0:
                 break
         
             for player_dct in players.values():
@@ -93,4 +94,5 @@ def draft():
 
             start += count
 
-    return "you're drafting {0}".format('1')
+    players = Player.query.all()
+    return render_template('players.html', players=players)
