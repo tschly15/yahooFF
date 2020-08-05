@@ -88,11 +88,14 @@ def draft():
                 break
         
             for player_dct in players.values():
-                player = Player(player_dct['player'][0])
+                player = Player(player_dct['player'])
                 db.session.add(player)
                 db.session.commit()
 
-            start += count
+            start += count_per_request
+
+    #TODO: get from league
+    eligible_positions = ('QB','RB','WR')
 
     players = Player.query.all()
-    return render_template('players.html', players=players)
+    return render_template('players.html', players=players, eligible_positions=eligible_positions)

@@ -14,4 +14,4 @@ class yahoo_oauth2(object):
     league_url = v2_url + '/league/'
     teams_url = v2_url + '/users;use_login=1;game_keys=nfl/teams'
 
-    player_url = '{0}/players;start={1};count={2}'
+    player_url = '{0}/players;start={1};count={2}/draft_analysis'

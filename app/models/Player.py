@@ -16,17 +16,24 @@ class Player(db.Model):
     editorial_team_abbr = db.Column(db.String(10)) #NO
     uniform_number = db.Column(db.String(10)) #6
     display_position = db.Column(db.String(20)) #QB
-    is_undroppable = db.Column(db.Integer) #0
     position_type = db.Column(db.String(15)) #0
     primary_position = db.Column(db.String(10)) #QB
     bye_week = db.Column(db.String(10)) #6
+    average_pick = db.Column(db.Float)
+
+    #League dependent variables
+    #is_undroppable = db.Column(db.Integer) #0
     #eligible_position = db.Column(db.String(50)) #QB, Q/W/R/T
 
+    #players = d['fantasy_content']['league'][1]['players']
+    #q =       b['fantasy_content']['league'][1]['players']['0']['player'][1]['draft_analysis'][0]['average_pick']
     def __init__(self, p):
-        #p = d['fantasy_content']['league'][1]['players']['0']['player'][0]
-
         dct = {}
-        for item in p:
+
+        player, draft = p
+        dct['average_pick'] = float(draft['draft_analysis'][0]['average_pick'].strip(' -') or 9999)
+
+        for item in p[0]:
 
             if not isinstance(item, dict):
                 continue
@@ -41,11 +48,6 @@ class Player(db.Model):
 
             elif item.get('bye_weeks'):
                 dct['bye_week'] = item['bye_weeks']['week']
-
-            #suppressing because this is league dependent
-            #elif item.get('eligible_positions'):
-            #    dct['eligible_positions'] = ', '.join([
-            #        pos.values()[0] for pos in item['eligible_positions'] ])
 
             else:
                 dct.update(item)

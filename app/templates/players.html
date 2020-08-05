@@ -1,7 +1,19 @@
 <html>
     <body>
-        {% for player in players %}
-            <p>{{ player.name_full }}</p>
-        {% endfor %}
+		<table>
+			<tr valign="top">
+
+				{% for position in eligible_positions %}
+					<td>
+					{% for player in players|sort(attribute='average_pick') %}
+						{% if player.primary_position == position %}
+							<p>{{ player.name_full }}</p>
+						{% endif %}
+					{% endfor %}
+					</td>
+				{% endfor %}
+
+			</tr>
+		</table>
     </body>
 </html>
