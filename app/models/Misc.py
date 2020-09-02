@@ -12,13 +12,13 @@ class yahoo_oauth2(object):
     redirect_url = "https://127.0.0.1:{0}/callback".format(app.config['PORT'])
 
     league_url = v2_url + '/league/'
-    teams_url = v2_url + '/users;use_login=1;game_keys=nfl/teams'
+    user_teams_url = v2_url + '/users;use_login=1;game_keys=nfl/teams'
 
     team_url = '{0}/team/{1}'
     player_url = '{0}/players;start={1};count={2}/draft_analysis'
 
     #retrieve all teams belonging to league
-    teams_url = v2_url + '/league/{0}/teams' #league_key
+    all_teams_url = v2_url + '/league/{0}/teams' #league_key
 
     #retrieve players using team context ... 
     roster_url = v2_url + '/team/{0}/roster/players' #team_key

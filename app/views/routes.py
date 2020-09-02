@@ -1,4 +1,5 @@
 import requests
+from sqlalchemy.exc import IntegrityError
 from app import app, db
 from app.models.Team import Team 
 from app.models.League import League
@@ -35,14 +36,22 @@ def teams():
             'access_token': current_user.user_access_token.strip()}
 
     #TODO: don't need to do this every time. create a refresh button to do this
-    r = requests.get(yahoo_oauth2.teams_url, params=params)
+    r = requests.get(yahoo_oauth2.user_teams_url, params=params)
     if r.status_code == 401:
         abort(401)
 
     d = r.json()
 
     teams = []
-    p = d['fantasy_content']['users']['0']['user'][1]['teams']
+    #TODO: first query of app restart fails here
+    try:
+        p = d['fantasy_content']['users']['0']['user'][1]['teams']
+    except Exception as e:
+        print e.args
+        print r.status_code
+        print r.url
+        print r.json()
+
     for tid, team_dct in p.iteritems():
         if tid == 'count':
             continue
@@ -52,6 +61,7 @@ def teams():
 
         #load the team into the database, if not already there
         if Team.query.filter_by(team_key=team.team_key).first() is None:
+            print 'adding team', team.team_key
             db.session.add(team)
             db.session.commit()
 
@@ -132,10 +142,11 @@ def league():
 
     #load the league into the database, if not already there
     if League.query.filter_by(league_key=league.league_key).first() is None:
+        print 'adding league', league_key
         db.session.add(league)
         db.session.commit()
 
-    teams_url = yahoo_oauth2.teams_url.format(league_key)
+    teams_url = yahoo_oauth2.all_teams_url.format(league_key)
     r = requests.get(teams_url, params=params)
     if r.status_code == 401:
         abort(401)
@@ -153,6 +164,7 @@ def league():
 
         #load the team into the database, if not already there
         if Team.query.filter_by(team_key=team.team_key).first() is None:
+            print 'ADDING team',team_key
             db.session.add(team)
             db.session.commit()
 
@@ -178,8 +190,13 @@ def league():
         
             for player_dct in players.values():
                 player = Player(player_dct['player'])
-                db.session.add(player)
-                db.session.commit()
+                print 'adding player',player_dct['player']
+                try:
+                    db.session.add(player)
+                except IntegrityError:
+                    db.session.rollback() #player probably exists
+                else:
+                    db.session.commit()
 
             start += count_per_request
 
@@ -191,16 +208,13 @@ def league():
         if r.status_code == 401:
             abort(401)
 
-        draft_dict = r.json()
-        with open('ros','w') as f:
-            f.write(str(draft_dict))
+        d = r.json()
+        draft_results = d['fantasy_content']['league'][1]['draft_results']
+        count = draft_results.pop('count')
+        print "Draft Size: {0} picks".format(count)
 
-        for player_dict in draft_dict['fantasy_content']['league'][1]['draft_results'].values():
-            #{'player_key': '390.p.28465', 'team_key': '390.l.137260.t.7', 'round': 14, 'pick': 165}
-            if not isinstance(player_dict, dict):
-                print 'probably "count"'
-                continue
-            roster = Roster(player_dict['draft_result'])
+        for draft_dict in draft_results.values():
+            roster = Roster(draft_dict['draft_result'])
             db.session.add(roster)
             db.session.commit()
 
