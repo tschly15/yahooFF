@@ -47,7 +47,7 @@ def user_home():
 
     access_token = current_user.user_access_token.strip()
     if access_token:
-        return redirect(url_for('home'))
+        return redirect(url_for('teams'))
 
     #attempt to refresh a stale Yahoo session
     refresh_token = current_user.user_refresh_token.strip()
@@ -96,7 +96,7 @@ def callback():
     db.session.add(current_user)
     db.session.commit()
 
-    return redirect(url_for('home'))
+    return redirect(url_for('teams'))
 
 @app.route('/refresh', methods=['GET','POST'])
 def refresh():
@@ -127,7 +127,7 @@ def refresh():
     db.session.add(current_user)
     db.session.commit()
 
-    return redirect(url_for('home'))
+    return redirect(url_for('teams'))
 
 @app.route('/logout', methods=['GET'])
 @login_required

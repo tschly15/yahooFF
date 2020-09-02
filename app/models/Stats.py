@@ -1,11 +1,9 @@
 from app import db
-from app.models.Player import Player
-from app.models.Roster import Roster
 
-class Team(db.Model):
-    __tablename__ = 'team'
+class Stats(db.Model):
+    __tablename__ = 'stats'
 
-    team_key = db.Column(db.String(30), primary_key=True, index=True) #399.l.11609.t.9
+    stats_pk = db.Column(db.String(30), primary_key=True, index=True)
     team_id = db.Column(db.Integer) #9
     team_name = db.Column(db.String(40)) #Thx for the F shack
     team_url = db.Column(db.VARCHAR) #https://football.fantasysports.yahoo.com/f1/11609/9

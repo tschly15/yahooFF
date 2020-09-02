@@ -1,7 +1,14 @@
 #!/bin/bash
-virtualenv flask
+
+#Linux
+[ ! -d flask ] && virtualenv flask
 cd flask
 source bin/activate || exit
+
+#Windows
+#[ ! -d flask ] && py -m venv flask
+#cd flask
+#source Scripts/activate || exit
 
 pip install setuptools --upgrade
 pip install cffi --upgrade

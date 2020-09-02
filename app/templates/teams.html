@@ -1,7 +1,7 @@
 <html>
     <body>
         <h1>Select a draft</h1>
-        <form action="/draft" method="post">
+        <form action="/league" method="post">
             {% for team in teams %}
                 <button type="submit" name="team_key" value="{{ team.team_key }}">{{ team.team_name }}</button>
             {% endfor %}

@@ -1,0 +1,40 @@
+#!/bin/bash
+
+access_token=$(psql -t -U terrence testing -c "select user_access_token from users" | sed 's/^ //')
+args="?access_token=${access_token}"
+
+#2020
+league_key="nfl.l.11609"
+team_key="${league_key}.t.1"
+#2019
+league_key=390.l.137260
+team_key="${league_key}.t.6"
+
+v2_url="https://fantasysports.yahooapis.com/fantasy/v2"
+
+echo $'\nLeague Settings'
+echo "${v2_url}/league/${league_key}/settings${args}"
+
+#this includes weekly projection
+echo $'\nLeague Scoreboard'
+echo "${v2_url}/league/${league_key}/scoreboard${args}"
+
+echo $'\nLeague Draft'
+echo "${v2_url}/league/${league_key}/draftresults${args}"
+
+echo $'\nTeam'
+echo "${v2_url}/team/${team_key}${args}"
+
+echo $'\nRoster'
+echo "${v2_url}/team/${team_key}/roster/players${args}"
+#for week 10
+#echo "${v2_url}/team/${team_key}/roster;week=10/players${args}"
+#for week 10 stats
+echo "${v2_url}/team/${team_key}/roster;week=10/players/stats${args}"
+
+echo $'\nPlayers'
+echo "${v2_url}/league/${league_key}/players${args}"
+#for specific player
+#echo "${v2_url}/league/${league_key}/players;player_keys=nfl.p.1234${args}"
+#for specific player stats
+#echo "${v2_url}/league/${league_key}/players;player_keys=nfl.p.1234/stats${args}"
