@@ -9,6 +9,10 @@ from app.models.Misc import yahoo_oauth2
 from flask import redirect, request, url_for, render_template, abort
 from flask_login import current_user, login_required
 
+def logger(msg):
+    with open('/home/tschleyer/programs/yahooFF/log','a') as f:
+        f.write('{0}\n'.format(msg))
+
 '''
 current_user:
     user_access_token: u'ZdmB36d...'
@@ -47,10 +51,10 @@ def teams():
     try:
         p = d['fantasy_content']['users']['0']['user'][1]['teams']
     except Exception as e:
-        print e.args
-        print r.status_code
-        print r.url
-        print r.json()
+        logger(e.args)
+        logger(r.status_code)
+        logger(r.url)
+        logger(r.json())
 
     for tid, team_dct in p.iteritems():
         if tid == 'count':
@@ -61,7 +65,7 @@ def teams():
 
         #load the team into the database, if not already there
         if Team.query.filter_by(team_key=team.team_key).first() is None:
-            print 'adding team', team.team_key
+            logger('adding team %s' % team.team_key)
             db.session.add(team)
             db.session.commit()
 
@@ -120,9 +124,17 @@ def team():
 @app.route('/league', methods=['GET','POST'])
 def league():
     '''
-    use the team key to identify the league_key
-    create the League object and store in db
+    1.) use the team key to identify the league_key
+    2.) create the League object and store in db
+    3.) retrieve all teams belonging to the league
+    4.) create each Team object and store in db
+    5.) retrieve all players belonging to the league
+    6.) create each Player object and store in db
+    7.) retrieve league draft results
+    8.) create each selection as Roster object and store in db
+    Note: Team and Player must be loaded before Roster
     '''
+
     team_key = request.form['team_key']
     team = Team.query.filter_by(team_key=team_key).first()
 
@@ -142,7 +154,7 @@ def league():
 
     #load the league into the database, if not already there
     if League.query.filter_by(league_key=league.league_key).first() is None:
-        print 'adding league', league_key
+        logger('adding league' + league_key)
         db.session.add(league)
         db.session.commit()
 
@@ -164,11 +176,11 @@ def league():
 
         #load the team into the database, if not already there
         if Team.query.filter_by(team_key=team.team_key).first() is None:
-            print 'ADDING team',team_key
+            logger('ADDING team' + team.team_key)
             db.session.add(team)
             db.session.commit()
 
-    if False:
+    if True:
         #retrieve all applicable players
         start = 0
         count_per_request = 25
@@ -182,7 +194,13 @@ def league():
                 abort(401)
 
             d = r.json()
-            players = d['fantasy_content']['league'][1]['players']
+            try:
+                players = d['fantasy_content']['league'][1]['players']
+            except Exception as e:
+                logger(e.args)
+                logger(r.status_code)
+                logger(r.url)
+                logger(r.json())
 
             #list of players has been exhausted
             if 'count' not in players or int(players.pop('count')) == 0:
@@ -190,7 +208,7 @@ def league():
         
             for player_dct in players.values():
                 player = Player(player_dct['player'])
-                print 'adding player',player_dct['player']
+                logger('adding player %s' % player_dct['player'])
                 try:
                     db.session.add(player)
                 except IntegrityError:
@@ -201,7 +219,7 @@ def league():
             start += count_per_request
 
     #now check for the draft and load if available
-    #TODO: team must be loaded before the draft results
+    #TODO: reference <league><draft_status>postdraft</draft_status> and a query to Roster to determine if we should retrieve the draft results
     if True: #if draft does not exist
         league_draft_url = yahoo_oauth2.league_draft_url.format(league_key)
         r = requests.get(league_draft_url, params=params)
@@ -211,12 +229,55 @@ def league():
         d = r.json()
         draft_results = d['fantasy_content']['league'][1]['draft_results']
         count = draft_results.pop('count')
-        print "Draft Size: {0} picks".format(count)
+        logger("Draft Size: {0} picks".format(count))
 
         for draft_dict in draft_results.values():
             roster = Roster(draft_dict['draft_result'])
             db.session.add(roster)
             db.session.commit()
+
+    #lastly, identify stat weeks and load into db
+    if True:
+
+        #retrieve stats for players in this league
+        week = 1
+        year_code = league_key.split('.',1)[0]
+        for player in Player.query.filter_by(player_key.startswith(year_code)):
+
+            #NOTE: made it here
+            stats_url = yahoo_oauth2.player_weekly_stats_url.format(
+                league_key, player.player_key, week)
+
+            r = requests.get(stats_url, params=params)
+            if r.status_code == 401:
+                abort(401)
+
+            d = r.json()
+            try:
+                players = d['fantasy_content']['league'][1]['players']
+            except Exception as e:
+                logger(e.args)
+                logger(r.status_code)
+                logger(r.url)
+                logger(r.json())
+
+            #list of players has been exhausted
+            if 'count' not in players or int(players.pop('count')) == 0:
+                break
+        
+            for player_dct in players.values():
+                player = Player(player_dct['player'])
+                logger('adding player %s' % player_dct['player'])
+                try:
+                    db.session.add(player)
+                except IntegrityError:
+                    db.session.rollback() #player probably exists
+                else:
+                    db.session.commit()
+
+            start += count_per_request
+
+
 
     #TODO: get from league
     eligible_positions = ('QB','RB','WR')

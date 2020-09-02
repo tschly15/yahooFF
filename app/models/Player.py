@@ -10,7 +10,7 @@ class Player(db.Model):
     name_last = db.Column(db.String(50)) #Brees
     name_ascii_first = db.Column(db.String(40)) #Drew
     name_ascii_last = db.Column(db.String(50)) #Brees
-    editorial_player_key = db.Column(db.String(30), unique=True) #nfl.p.5479
+    editorial_player_key = db.Column(db.String(30)) #nfl.p.5479
     editorial_team_key = db.Column(db.String(30)) #nfl.t.18
     editorial_team_full_name = db.Column(db.String(30)) #New Orleans Saints
     editorial_team_abbr = db.Column(db.String(10)) #NO

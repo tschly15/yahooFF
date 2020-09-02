@@ -1,6 +1,6 @@
 #!/bin/bash
 
-access_token=$(psql -t -U terrence testing -c "select user_access_token from users" | sed 's/^ //')
+access_token=$(psql -t -U tschleyer testing2 -c "select user_access_token from users" | sed 's/^ //')
 args="?access_token=${access_token}"
 
 #2020
@@ -37,4 +37,14 @@ echo "${v2_url}/league/${league_key}/players${args}"
 #for specific player
 #echo "${v2_url}/league/${league_key}/players;player_keys=nfl.p.1234${args}"
 #for specific player stats
-#echo "${v2_url}/league/${league_key}/players;player_keys=nfl.p.1234/stats${args}"
+echo "${v2_url}/league/${league_key}/players;player_keys=348.p.6663;week=2/stats${args}"
+
+#https://fantasysports.yahooapis.com/fantasy/v2/league/390.l.137260/players;player_keys=390.p.5228/stats?access_token=
+
+For NFL, you can specify a week parameter to retrieve a specific week - otherwise it will default to the current roster
+
+https://fantasysports.yahooapis.com/fantasy/v2/team//roster;week=10
+
+https://fantasysports.yahooapis.com/fantasy/v2/league/390.l.137260/players;player_keys=390.p.5228;sort_type=week;sort_week=3/stats?access_token=nyvsn.uc4F73LZZK2bMdUKhJ9HpWjyzPHt6RBvpvF7Bt70Meo7zjE5fGYNSfxeJ1u1DpJUtEpO4qjQwTQSrOtbjo4Xaj8U4B6nDBFI7BDBKYtVMS.vIz3Bi07UmJe8BoT7RJHGZthO6yKWJxvcojiesBa4B8ZUyV6cyTKS5r9Q93pmm36bnvdJIcsV77TeJ0E7T.893MnqJ5OcLGPhA2QW257ehjUFlr8.mp3a.sNW0SjNUVeTY.6XpZJZkejDqWNyGeLYH_MQEk3v7.5i2A_zLLYOmfKzf1Uj0LtAy6Gr4DkEGR4OZmGfLC0oQPhV6FgsymC0Fsi2MMldFnkOse7ZpYBurufIUyTjlNsZZCmGXq.9v.HAbP4OqVvQwkoH5L4p3nnL9OR4uXEJO8_dURnYTcxipGfpnQ1rld08tdPBSTdPCnkGXnCrd7rLUZOQla7TOSQ.N8zPpczNNIVbc0OqJEE1p4TFVzOMKCU3ylxlLR7wD4rymFVHQiixPL9QVp7yeV0xWIwb9Z5ZtegvEVIqu4QuA59gjVip0JjgX_pR3U_jG_EYF1dWN5iCZnpQbqCqlWP7hGmf0_OgBP6x4_Mn4DLcYqVJ2eMfTZZuG690z1OLEEwczzqiBFNgEwRoLThObfGhLK3SpXQro1GBTmxicfeaYozO994vmwYYjbghSqcfxK6jlTyXqP.MtH98AxVPKVBXw_EQU1nvuybYe6pwU5WVF7QTbSEUgAPkhufaWZntTbpyYA0btuIh_Bi4ixzcGchw4VDk3ME2r90EBB0BxpIkJFHBpp0KiMbOqLTH.RBFSqdMiHkPruHDEW8YTuKIVzH1TH5_2tF0acF3MSp2HadCECPZ4.nWPBKwoCfzo_MCy1eoibMSEIXi3HqDhOKH8LC2HkyEgts631RvEHMt76.4sC8HrG1AmskVFdlLHXFHJIy7u07T6tauLKN_9YbUcnVUCgr0Pj_EGeB3VWbNnD2g.derY-
+
+https://fantasysports.yahooapis.com/fantasy/v2/league/380.l.156345/players;player_keys=380.p.29238/stats;type=week;week=2?access_token=RqJR0cCc4F5ly9niKr3PgLoJTKuxHz.tnIhJAyQ0Rs61BwL9AbMsWpZNNIL0sYiH0gKg5ItjiqQT4J0c5.LE_os_8AJdmyty_HCbCqEBKf5mKjmHC2WyNY9Ls9QQiC7uB9c.38Zt61brPK4qLoNyOBpI.3FA51ctsgCwR7cHbUgvR6DkFuyRBZQsPARghWG2c_Ph_2MbFcxJaHNgVdytAhfklGazR02rJii7Nla_9wvNZEGaRbxlNKnSTPvKKzxCIeTUx.F4GsvUXxmXoFUQ5TWL5ipzG0TsNyZeYj18yq9CQVwNxHHaqo1w1rkm1fMZs3GEsWLM2pj5RGm4ekmchjohEMjwAzvZxCzAuDKrf5h2I9SUZvA113LsV79vmOp6NvdnGfVmc_pf3cmOu_Mi29tsHWOI1nO6V9__LtQsyf02r8lggs.boEp.MKLGAXcHQsFZvKRGJEDgX8Shye82ve.NTgsFDa7S4NnHJN5ASS0Ujy3imkhBgOQf2ydguzBcJWqeULahCyGbNXEUB4XzbFImB9PK65U3faLciDPF8JIXs07.xNFOeYCZkzlfxbKCbOVDZMG9j3lmzwrXe2a6tem5YYfVyaZBcb9rjzFMwkbDfmRxNBC_LpsrXJGqw4AVT3mB3raOu7Oh63LLYf5eVsT9kKvGaAzOcEYCh8yQV9nfLo1y.xoikqyZikubm_vPRIwpbEWXA4DmK0eNeD7D32rHnjpy4kITeHX2G2FUoPa6hjwLY8O4r0o8oCLTyeNi5YAd1SB0nYQYVF_FjhiL0rlewp01DVKF2X8MCRjs1FOScT1LRnJdnCd4Wz0JjYhRxu91YDVlTlSK7RRGxIRbcgCdTXAr7TAS91PUeA.aWN_Gg7BkwT4.ossbTSCUhR8ZPbt2RDlY0_au.aTKsffnD1S2bMDtj4VWuoPrZE43K7y8_hKn4SiSYd27IziYwPFbX61wzzBLG5fvGrZccfrbiyle6a.QPXY-

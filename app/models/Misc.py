@@ -23,7 +23,7 @@ class yahoo_oauth2(object):
     #retrieve players using team context ... 
     roster_url = v2_url + '/team/{0}/roster/players' #team_key
     #... and their weekly stats
-    player_stats_url = '{0}/stats'.format(roster_url) #player_url
+    player_weekly_stats_url = v2_url + '/league/{0}/players;player_keys={1}/stats;type=week;week={2}' #league_key, player_key, week
 
     #draft results - team context
     team_draft_url = v2_url + '/team/{0}/draftresults' #team_key
